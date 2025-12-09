@@ -1,0 +1,44 @@
+# SP correction M062X def2-TZVP on def2-SVP in water 
+# by svatunek // lab
+# --- Declare global script variables ---
+Variable E_opt;
+Variable E_high;
+Variable G_low;
+Variable G_high;
+Variable CurrentStep = 0;
+
+  # --- Step 1: Optimization ---
+  New_Step
+    ! Opt M062X def2-SVP TightSCF defgrid3 CPCM(water)
+  Step_End
+  CurrentStep = CurrentStep + 1;
+  Read E_opt = SCF_ENERGY[CurrentStep];
+
+  # --- Step 2: Frequencies (same level) ---
+  New_Step
+    ! Freq M062X def2-SVP TightSCF defgrid3 CPCM(water)
+  Step_End
+  CurrentStep = CurrentStep + 1;
+  Read G_low = THERMO_FREE_ENERGY_G[CurrentStep];
+
+  # --- Step 3: High-level SP ---
+  New_Step
+    ! SP M062X def2-TZVP TightSCF defgrid3 CPCM(water)
+  Step_End
+  CurrentStep = CurrentStep + 1;
+  Read E_high = SCF_ENERGY[CurrentStep];
+
+  # --- Compute Corrected Free Energy ---
+  G_high = G_low + (E_high - E_opt);
+
+  # --- Output ---
+Print("=== Thermochemistry Summary ===\n");
+Print("Low-level SCF energy (Eh): %.10lf\n", E_opt);
+Print("High-level SP energy (Eh): %.10lf\n", E_high);
+Print("Delta E (Eh): %.10lf\n", E_high - E_opt);
+Print("Corrected G at high level (Eh): %.10lf\n", G_high);
+Print("Done.\n");
+
+
+end
+
