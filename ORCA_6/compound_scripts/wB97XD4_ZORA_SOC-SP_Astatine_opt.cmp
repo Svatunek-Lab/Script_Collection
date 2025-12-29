@@ -1,0 +1,84 @@
+# ZORA Opt/Freq (SVP) + SOC Single-Point (TZVP) with wB97X-D4
+# by svatunek // lab
+#
+# Corrected free energy:
+#   G_high = G_low + (E_SOC_TZVP - E_opt_low)
+
+# --- Declare global script variables ---
+Variable E_opt;
+Variable E_soc;
+Variable G_low;
+Variable G_high;
+Variable CurrentStep = 0;
+
+# ------------------------------------------------------------
+# Step 1: Optimization (scalar-relativistic, cheaper basis)
+#   - ZORA for all atoms
+#   - ZORA-def2-SVP for "normal" atoms
+#   - At uses SARC-ZORA-TZVP
+# ------------------------------------------------------------
+New_Step
+  ! Opt wB97X-D4 ZORA TightSCF defgrid3 CPCM(water) RIJCOSX
+  ! ZORA-def2-SVP SARC/J
+
+
+  %basis
+    NewGTO At "SARC-ZORA-TZVP" end
+  end
+Step_End
+CurrentStep = CurrentStep + 1;
+Read E_opt = SCF_ENERGY[CurrentStep];
+
+# ------------------------------------------------------------
+# Step 2: Frequencies at same low level (for thermal correction)
+# ------------------------------------------------------------
+New_Step
+  ! Freq wB97X-D4 ZORA TightSCF defgrid3 CPCM(water) RIJCOSX
+  ! ZORA-def2-SVP SARC/J
+
+  %basis
+    NewGTO At "SARC-ZORA-TZVP" end
+  end
+Step_End
+CurrentStep = CurrentStep + 1;
+Read G_low = THERMO_FREE_ENERGY_G[CurrentStep];
+
+# ------------------------------------------------------------
+# Step 3: SOC single-point at higher basis
+#   - ZORA-def2-TZVP for "normal" atoms
+#   - At: SARC-ZORA-TZVP
+#   - SOC via SOMF
+# ------------------------------------------------------------
+New_Step
+  ! SP wB97X-D4 ZORA TightSCF defgrid3 CPCM(water) RIJCOSX
+  ! ZORA-def2-TZVP SARC/J
+  ! SOC SOMF
+
+  %rel
+    soc true
+  end
+
+  %basis
+    NewGTO At "SARC-ZORA-TZVP" end
+  end
+Step_End
+CurrentStep = CurrentStep + 1;
+Read E_soc = SCF_ENERGY[CurrentStep];
+
+# ------------------------------------------------------------
+# Compute corrected free energy
+# ------------------------------------------------------------
+G_high = G_low + (E_soc - E_opt);
+
+# ------------------------------------------------------------
+# Output
+# ------------------------------------------------------------
+Print("=== Thermochemistry Summary (ZORA opt/freq; wB97X-D4; SOC@TZVP SP) ===\n");
+Print("Low-level SCF energy E_opt (Eh): %.10lf\n", E_opt);
+Print("Low-level Free Energy G_low (Eh): %.10lf\n", G_low);
+Print("High-level SOC SP energy E_soc (Eh): %.10lf\n", E_soc);
+Print("DeltaE = E_soc - E_opt (Eh): %.10lf\n", E_soc - E_opt);
+Print("Corrected Free Energy G_high (Eh): %.10lf\n", G_high);
+Print("Done.\n");
+
+end
