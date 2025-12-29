@@ -15,7 +15,7 @@ Variable CurrentStep = 0;
 # Step 1: Optimization (scalar-relativistic, cheaper basis)
 #   - ZORA for all atoms
 #   - ZORA-def2-SVP for "normal" atoms
-#   - At uses SARC-ZORA-TZVP
+#   - At uses SARC-ZORA-TZVP (do NOT drop At to SVP)
 # ------------------------------------------------------------
 New_Step
   ! Opt wB97X-D4 ZORA TightSCF defgrid3 CPCM(water) RIJCOSX
@@ -50,13 +50,8 @@ Read G_low = THERMO_FREE_ENERGY_G[CurrentStep];
 #   - SOC via SOMF
 # ------------------------------------------------------------
 New_Step
-  ! SP wB97X-D4 ZORA TightSCF defgrid3 CPCM(water) RIJCOSX
-  ! ZORA-def2-TZVP SARC/J
-  ! SOC SOMF
-
-  %rel
-    soc true
-  end
+  ! SP wB97X-D4 TightSCF defgrid3 CPCM(water) RIJCOSX
+  ! ZORA-def2-TZVP SARC/J RI-SOMF(1X)
 
   %basis
     NewGTO At "SARC-ZORA-TZVP" end
@@ -73,7 +68,7 @@ G_high = G_low + (E_soc - E_opt);
 # ------------------------------------------------------------
 # Output
 # ------------------------------------------------------------
-Print("=== Thermochemistry Summary (ZORA opt/freq; wB97X-D4; SOC@TZVP SP) ===\n");
+Print("=== Thermochemistry Summary ===\n");
 Print("Low-level SCF energy E_opt (Eh): %.10lf\n", E_opt);
 Print("Low-level Free Energy G_low (Eh): %.10lf\n", G_low);
 Print("High-level SOC SP energy E_soc (Eh): %.10lf\n", E_soc);
